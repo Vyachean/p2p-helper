@@ -1,3 +1,5 @@
+import { startRequestListener } from '@/src/requestListener';
+
 export default defineBackground(() => {
-  console.log('Hello background!', { id: browser.runtime.id });
+  startRequestListener();
 });
