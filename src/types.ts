@@ -2,6 +2,10 @@ import type { TypeOf } from 'zod';
 import { array, boolean, literal, number, object, string } from 'zod';
 
 export const requestHeadersZod = object({}).catchall(string());
+export const isRequestHeaders = (
+  v: unknown,
+): v is TypeOf<typeof requestHeadersZod> =>
+  requestHeadersZod.safeParse(v).success;
 
 export const otcRequestBodyZod = object({
   userId: number(),
@@ -29,7 +33,12 @@ export type OtcRequestOptions = TypeOf<typeof otcRequestOptionsZod>;
 
 export const messageRequestType = 'requestBadOtc';
 
-export const stoppedOnOTCZod = object({}).catchall(boolean());
+export const stoppedOnOTCZod = object({}).catchall(
+  object({
+    hasStopPhrases: boolean(),
+    userId: string(),
+  }),
+);
 
 export type StoppedOnOTC = TypeOf<typeof stoppedOnOTCZod>;
 
@@ -51,9 +60,16 @@ export const otcOnlineResponseZod = object({
       object({
         remark: string(),
         nickName: string(),
+        userId: string(),
       }),
     ),
   }),
 });
 
 export const otcOnlineUrl = 'https://api2.bybit.com/fiat/otc/item/online';
+
+export const blockUserResponseZod = object({
+  result: boolean(),
+});
+
+export const storageTag = 'local:bybit-headers';

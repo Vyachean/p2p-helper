@@ -27,12 +27,12 @@ export const getStoppedOnOTC = async ({
   const responsePayload = otcOnlineResponseZod.parse(await response.json());
 
   const marks = responsePayload.result.items.reduce<StoppedOnOTC>(
-    (marks, { nickName, remark }) => {
+    (marks, { nickName, remark, userId }) => {
       const hasStopPhrases = !!stopPhrases.find((line) =>
         remark.toLowerCase().includes(line),
       );
 
-      return { ...marks, [nickName]: hasStopPhrases };
+      return { ...marks, [nickName]: { hasStopPhrases, userId } };
     },
     {},
   );

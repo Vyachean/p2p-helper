@@ -1,5 +1,6 @@
 import { debounce } from 'lodash-es';
 import { markClass, type StoppedOnOTC } from './types';
+import { blockUser } from './fastBlockUser';
 
 export const updateMarks = debounce((marks: StoppedOnOTC) => {
   const contentEl = document.querySelector(
@@ -12,27 +13,45 @@ export const updateMarks = debounce((marks: StoppedOnOTC) => {
     nodeListNames.forEach((nameEl) => {
       const name = nameEl.firstChild?.textContent;
 
-      Object.entries(marks).forEach(([nickName, isBan]) => {
-        if (nickName === name) {
-          const foundEl = nameEl.querySelector(`.${markClass}`);
+      const container = nameEl.parentElement;
 
-          const markEl =
-            (foundEl instanceof HTMLSpanElement ? foundEl : undefined) ??
-            document.createElement('span');
+      if (container) {
+        Object.entries(marks).forEach(
+          ([nickName, { hasStopPhrases, userId }]) => {
+            if (nickName === name) {
+              const foundEl = container.querySelector(`.${markClass}`);
 
-          markEl.classList.add(markClass);
+              const markEl =
+                (foundEl instanceof HTMLSpanElement ? foundEl : undefined) ??
+                document.createElement('span');
 
-          if (isBan) {
-            markEl.innerText = ' 🛑';
-          } else {
-            markEl.innerText = ' ✅';
-          }
+              markEl.classList.add(markClass);
 
-          if (!foundEl) {
-            nameEl.append(markEl);
-          }
-        }
-      });
+              if (hasStopPhrases) {
+                markEl.innerText = ' 🛑';
+              } else {
+                markEl.innerText = ' ✅';
+              }
+
+              const blockBtn = document.createElement('button');
+              blockBtn.type = 'button';
+              blockBtn.innerHTML = 'BLOCK';
+              blockBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                blockBtn.disabled = true;
+                void blockUser(userId)
+                  .then(() => (blockBtn.hidden = true))
+                  .finally(() => (blockBtn.disabled = false));
+              });
+
+              if (!foundEl) {
+                container.append(markEl);
+                container.append(blockBtn);
+              }
+            }
+          },
+        );
+      }
     });
   }
 }, 1e3);

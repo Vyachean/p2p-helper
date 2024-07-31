@@ -11,8 +11,10 @@ import {
   messageRequestType,
   otcOnlineUrl,
   otcRequestBodyZod,
+  storageTag,
 } from './types';
 import { browser } from 'wxt/browser';
+import { storage } from 'wxt/storage';
 
 export const startRequestListener = () => {
   const sendMarks = async (tabId: number, options: OtcRequestOptions) => {
@@ -86,6 +88,11 @@ export const startRequestListener = () => {
         headers['sec-ch-ua'] &&
         headers['sec-ch-ua'][headers['sec-ch-ua'].length - 1] !== ';'
       ) {
+        void storage.setItem(storageTag, {
+          guid: headers.guid,
+          traceparent: headers.traceparent,
+        });
+
         void setQueue(tabId, headers);
       }
 
