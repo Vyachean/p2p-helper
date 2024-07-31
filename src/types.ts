@@ -37,6 +37,7 @@ export const stoppedOnOTCZod = object({}).catchall(
   object({
     hasStopPhrases: boolean(),
     userId: string(),
+    foundPhrases: string().optional(),
   }),
 );
 

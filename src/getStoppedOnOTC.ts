@@ -10,6 +10,44 @@ import stopPhrasesJson from './stopPhrases.json';
 
 export const stopPhrases: string[] = uniq(stopPhrasesJson.map(lowerCase));
 
+const getContextAroundPhrase = (
+  text: string,
+  searchPhrase: string,
+  amount: number = 0,
+) => {
+  const startPhraseIndex = text.indexOf(searchPhrase);
+  const endPhraseIndex = text.lastIndexOf(searchPhrase) + searchPhrase.length;
+
+  const lastPhraseIndex =
+    text.substring(endPhraseIndex).search(/\s+/) + endPhraseIndex;
+
+  if (startPhraseIndex < 0) {
+    return undefined;
+  }
+
+  const beforeSearchPhrase = amount
+    ? text
+        .substring(0, startPhraseIndex)
+        .trim()
+        .split(/\s+/)
+        .slice(-amount)
+        .join(' ')
+    : '';
+
+  const afterSearchPhrase = amount
+    ? text
+        .substring(lastPhraseIndex)
+        .trim()
+        .split(/\s+/)
+        .slice(0, amount)
+        .join(' ')
+    : '';
+
+  const fullSearchPhrase = text.substring(startPhraseIndex, lastPhraseIndex);
+
+  return `${beforeSearchPhrase} ${fullSearchPhrase} ${afterSearchPhrase}`.trim();
+};
+
 export const getStoppedOnOTC = async ({
   body,
   headers,
@@ -28,11 +66,15 @@ export const getStoppedOnOTC = async ({
 
   const marks = responsePayload.result.items.reduce<StoppedOnOTC>(
     (marks, { nickName, remark, userId }) => {
-      const hasStopPhrases = !!stopPhrases.find((line) =>
-        remark.toLowerCase().includes(line),
-      );
+      let foundPhrases: string | undefined;
 
-      return { ...marks, [nickName]: { hasStopPhrases, userId } };
+      const hasStopPhrases = !!stopPhrases.find((line) => {
+        foundPhrases = getContextAroundPhrase(remark.toLowerCase(), line, 3);
+
+        return !!foundPhrases?.length;
+      });
+
+      return { ...marks, [nickName]: { hasStopPhrases, userId, foundPhrases } };
     },
     {},
   );

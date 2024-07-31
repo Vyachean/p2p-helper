@@ -17,13 +17,13 @@ export const updateMarks = debounce((marks: StoppedOnOTC) => {
 
       if (container) {
         Object.entries(marks).forEach(
-          ([nickName, { hasStopPhrases, userId }]) => {
+          ([nickName, { hasStopPhrases, userId, foundPhrases }]) => {
             if (nickName === name) {
               const foundEl = container.querySelector(`.${markClass}`);
 
               const markEl =
                 (foundEl instanceof HTMLSpanElement ? foundEl : undefined) ??
-                document.createElement('span');
+                document.createElement('div');
 
               markEl.classList.add(markClass);
 
@@ -44,9 +44,15 @@ export const updateMarks = debounce((marks: StoppedOnOTC) => {
                   .finally(() => (blockBtn.disabled = false));
               });
 
+              const foundPhrasesEl = document.createElement('p');
+              if (foundPhrases) {
+                foundPhrasesEl.innerText = `...${foundPhrases}...`;
+              }
+
               if (!foundEl) {
                 container.append(markEl);
                 container.append(blockBtn);
+                container.append(foundPhrasesEl);
               }
             }
           },
