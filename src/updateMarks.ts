@@ -1,6 +1,85 @@
 import { debounce } from 'lodash-es';
 import { markClass, type StoppedOnOTC } from './types';
 import { blockUser } from './fastBlockUser';
+import { useLocalBlockList } from './localBlockStorage';
+
+const localBlockList = useLocalBlockList();
+
+const createBtn = (label: string) => {
+  const btnEl = document.createElement('button');
+  btnEl.type = 'button';
+  btnEl.innerText = label;
+  const { style } = btnEl;
+  style.display = 'inline-block';
+  style.padding = '6px';
+  style.borderRadius = '4px';
+  return btnEl;
+};
+
+const hideParentTr = (el: Element, transparent?: boolean) => {
+  const tableRow = el.closest('tr');
+
+  if (tableRow) {
+    if (transparent) {
+      tableRow.style.opacity = '0.1';
+      tableRow.style.pointerEvents = 'none';
+    } else {
+      tableRow.style.display = 'none';
+    }
+  }
+};
+
+const createContainer = (
+  hasStopPhrases: boolean,
+  userId: string,
+  nameEl: Element,
+  foundPhrases?: string,
+) => {
+  const container = document.createElement('div');
+  container.classList.add(markClass);
+  const containerStyle = container.style;
+  containerStyle.display = 'flex';
+  containerStyle.flexWrap = 'wrap';
+  containerStyle.gap = '4px';
+  containerStyle.alignItems = 'center';
+
+  const markEl = document.createElement('div');
+
+  if (hasStopPhrases) {
+    markEl.innerText = ' 🛑';
+  } else {
+    markEl.innerText = ' ✅';
+  }
+  container.append(markEl);
+
+  const bybitBlockBtn = createBtn('add to blacklist');
+  bybitBlockBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    void onClickBybitBlockBtn();
+  });
+
+  const onClickBybitBlockBtn = async () => {
+    bybitBlockBtn.disabled = true;
+    try {
+      await blockUser(userId);
+      await localBlockList.add(userId);
+      hideParentTr(nameEl, true);
+      bybitBlockBtn.hidden = true;
+    } finally {
+      bybitBlockBtn.disabled = false;
+    }
+  };
+
+  container.append(bybitBlockBtn);
+
+  const foundPhrasesEl = document.createElement('p');
+  if (foundPhrases) {
+    foundPhrasesEl.innerText = `...${foundPhrases}...`;
+  }
+  container.append(foundPhrasesEl);
+
+  return container;
+};
 
 export const updateMarks = debounce((marks: StoppedOnOTC) => {
   const contentEl = document.querySelector(
@@ -15,45 +94,26 @@ export const updateMarks = debounce((marks: StoppedOnOTC) => {
 
       const container = nameEl.parentElement;
 
-      if (container) {
+      const foundContainer = container?.querySelector(`.${markClass}`);
+
+      if (container && !foundContainer) {
         Object.entries(marks).forEach(
-          ([nickName, { hasStopPhrases, userId, foundPhrases }]) => {
+          // eslint-disable-next-line @typescript-eslint/no-misused-promises
+          async ([nickName, { hasStopPhrases, userId, foundPhrases }]) => {
             if (nickName === name) {
-              const foundEl = container.querySelector(`.${markClass}`);
-
-              const markEl =
-                (foundEl instanceof HTMLSpanElement ? foundEl : undefined) ??
-                document.createElement('div');
-
-              markEl.classList.add(markClass);
-
-              if (hasStopPhrases) {
-                markEl.innerText = ' 🛑';
-              } else {
-                markEl.innerText = ' ✅';
+              if (await localBlockList.has(userId)) {
+                hideParentTr(nameEl);
+                return;
               }
 
-              const blockBtn = document.createElement('button');
-              blockBtn.type = 'button';
-              blockBtn.innerHTML = 'BLOCK';
-              blockBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                blockBtn.disabled = true;
-                void blockUser(userId)
-                  .then(() => (blockBtn.hidden = true))
-                  .finally(() => (blockBtn.disabled = false));
-              });
+              const customContainer = createContainer(
+                hasStopPhrases,
+                userId,
+                nameEl,
+                foundPhrases,
+              );
 
-              const foundPhrasesEl = document.createElement('p');
-              if (foundPhrases) {
-                foundPhrasesEl.innerText = `...${foundPhrases}...`;
-              }
-
-              if (!foundEl) {
-                container.append(markEl);
-                container.append(blockBtn);
-                container.append(foundPhrasesEl);
-              }
+              container.append(customContainer);
             }
           },
         );

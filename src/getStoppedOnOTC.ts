@@ -1,5 +1,5 @@
 import type { TypeOf } from 'zod';
-import { lowerCase, uniq } from 'lodash-es';
+import { uniq } from 'lodash-es';
 import {
   otcOnlineResponseZod,
   otcOnlineUrl,
@@ -8,25 +8,31 @@ import {
 } from './types';
 import stopPhrasesJson from './stopPhrases.json';
 
-export const stopPhrases: string[] = uniq(stopPhrasesJson.map(lowerCase));
+export const stopPhrases: string[] = uniq(stopPhrasesJson);
 
 const getContextAroundPhrase = (
-  text: string,
-  searchPhrase: string,
-  amount: number = 0,
+  originalText: string,
+  originalSearchPhrase: string,
+  amount = 0,
 ) => {
-  const startPhraseIndex = text.indexOf(searchPhrase);
-  const endPhraseIndex = text.lastIndexOf(searchPhrase) + searchPhrase.length;
+  const text = originalText.toLowerCase();
+  const searchPhrase = originalSearchPhrase.toLowerCase();
 
-  const lastPhraseIndex =
-    text.substring(endPhraseIndex).search(/\s+/) + endPhraseIndex;
+  const startPhraseIndex = text.indexOf(searchPhrase);
 
   if (startPhraseIndex < 0) {
-    return undefined;
+    return;
   }
 
+  const endPhraseIndex = text.lastIndexOf(searchPhrase) + searchPhrase.length;
+
+  const lastPhraseIndex = Math.min(
+    text.substring(endPhraseIndex).search(/\s+/) + endPhraseIndex,
+    text.length - 1,
+  );
+
   const beforeSearchPhrase = amount
-    ? text
+    ? originalText
         .substring(0, startPhraseIndex)
         .trim()
         .split(/\s+/)
@@ -35,7 +41,7 @@ const getContextAroundPhrase = (
     : '';
 
   const afterSearchPhrase = amount
-    ? text
+    ? originalText
         .substring(lastPhraseIndex)
         .trim()
         .split(/\s+/)
@@ -43,7 +49,10 @@ const getContextAroundPhrase = (
         .join(' ')
     : '';
 
-  const fullSearchPhrase = text.substring(startPhraseIndex, lastPhraseIndex);
+  const fullSearchPhrase = originalText.substring(
+    startPhraseIndex,
+    lastPhraseIndex,
+  );
 
   return `${beforeSearchPhrase} ${fullSearchPhrase} ${afterSearchPhrase}`.trim();
 };
@@ -69,7 +78,7 @@ export const getStoppedOnOTC = async ({
       let foundPhrases: string | undefined;
 
       const hasStopPhrases = !!stopPhrases.find((line) => {
-        foundPhrases = getContextAroundPhrase(remark.toLowerCase(), line, 3);
+        foundPhrases = getContextAroundPhrase(remark, line, 3);
 
         return !!foundPhrases?.length;
       });

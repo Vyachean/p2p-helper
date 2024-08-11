@@ -8,7 +8,7 @@ export const isRequestHeaders = (
   requestHeadersZod.safeParse(v).success;
 
 export const otcRequestBodyZod = object({
-  userId: number(),
+  userId: number().or(string()),
   tokenId: string(),
   currencyId: string(),
   payment: array(string()),
@@ -70,7 +70,30 @@ export const otcOnlineResponseZod = object({
 export const otcOnlineUrl = 'https://api2.bybit.com/fiat/otc/item/online';
 
 export const blockUserResponseZod = object({
-  result: boolean(),
+  result: boolean().nullable(),
+  ret_msg: string(),
 });
 
 export const storageTag = 'local:bybit-headers';
+
+export const blockUserListResponseZod = object({
+  result: object({
+    list: array(
+      object({
+        blockedReasonCode: string(),
+        blockedRemark: string(),
+        blockedUserId: string(),
+        createDate: string(),
+        nickName: string(),
+      }),
+    ),
+    pageNum: number(),
+    pageSize: number(),
+    pages: number(),
+    totalSize: number(),
+  }),
+});
+
+export const deleteBLockUserResponseZod = object({
+  result: boolean(),
+});
